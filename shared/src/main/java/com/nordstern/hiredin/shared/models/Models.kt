@@ -36,7 +36,8 @@ data class CandidateProfile(
     val currentSalary: Int? = null,
     val visaStatus: CandidateVisaStatus? = null,
     val openToWork: Boolean = false,
-    val isProfileComplete: Boolean = false
+    val isProfileComplete: Boolean = false,
+    val avatarUrl: String? = null
 )
 
 data class Job(

@@ -1,5 +1,6 @@
 package com.nordstern.hiredin.shared.api
 
+import com.google.gson.annotations.SerializedName
 import com.nordstern.hiredin.shared.sync.SyncChangesResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -16,17 +17,57 @@ interface AuthApi {
     @POST("auth/logout")
     suspend fun logout(): ApiResponse<Unit>
 
+    @POST("auth/forgot-password")
+    suspend fun forgotPassword(@Body request: ForgotPasswordRequest): ApiResponse<Unit>
+
+    @POST("auth/register")
+    suspend fun register(@Body request: RegisterRequest): ApiResponse<LoginResponse>
+
+    @POST("auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): ApiResponse<Unit>
+
+    @POST("auth/oauth/{provider}")
+    suspend fun oauthLogin(
+        @retrofit2.http.Path("provider") provider: String,
+        @Body request: OAuthLoginRequest
+    ): ApiResponse<LoginResponse>
+
     @GET("auth/me")
     suspend fun me(): ApiResponse<MeResponse>
 }
 
-data class LoginRequest(val email: String, val password: String, val deviceId: String? = null)
-data class RefreshRequest(val refreshToken: String, val deviceId: String? = null)
+data class LoginRequest(
+    val email: String,
+    val password: String,
+    @SerializedName("device_id") val deviceId: String? = null
+)
+data class ForgotPasswordRequest(val email: String)
+data class RegisterRequest(
+    val email: String,
+    val password: String,
+    @SerializedName("first_name") val firstName: String,
+    @SerializedName("last_name") val lastName: String,
+    @SerializedName("device_id") val deviceId: String? = null
+)
+data class ResetPasswordRequest(
+    val token: String,
+    @SerializedName("new_password") val newPassword: String
+)
+data class OAuthLoginRequest(
+    @SerializedName("id_token") val idToken: String? = null,
+    @SerializedName("access_token") val accessToken: String? = null,
+    @SerializedName("authorization_code") val authorizationCode: String? = null,
+    @SerializedName("device_id") val deviceId: String? = null
+)
+data class RefreshRequest(
+    @SerializedName("refresh_token") val refreshToken: String,
+    @SerializedName("device_id") val deviceId: String? = null
+)
 data class LoginResponse(
-    val accessToken: String,
-    val refreshToken: String,
-    val expiresIn: Long,
-    val userId: String? = null
+    @SerializedName("access_token") val accessToken: String,
+    @SerializedName("refresh_token") val refreshToken: String,
+    @SerializedName("expires_in") val expiresIn: Long,
+    @SerializedName("user_id") val userId: String? = null
 )
 data class MeResponse(
     val userId: String,

@@ -7,6 +7,7 @@ import com.nordstern.hiredin.shared.models.Job
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -53,6 +54,12 @@ interface JobsApi {
 
     @GET(ApiEndpoints.Jobs.FILTERS)
     suspend fun getFilters(): ApiResponse<JobFiltersDto>
+
+    @GET(ApiEndpoints.Jobs.JOB_ALERTS)
+    suspend fun getJobAlerts(): ApiResponse<JobAlertsDto>
+
+    @PUT(ApiEndpoints.Jobs.JOB_ALERTS)
+    suspend fun updateJobAlerts(@Body body: JobAlertsDto): ApiResponse<JobAlertsDto>
 }
 
 data class JobApplyRequest(
@@ -67,4 +74,12 @@ data class JobFiltersDto(
     val locations: List<String> = emptyList(),
     val employmentTypes: List<String> = emptyList(),
     val salaryRanges: List<String> = emptyList()
+)
+
+data class JobAlertsDto(
+    val enabled: Boolean = true,
+    val keywords: String = "",
+    val location: String = "",
+    val emailDigest: Boolean = true,
+    val pushEnabled: Boolean = true
 )

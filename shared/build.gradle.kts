@@ -4,19 +4,28 @@ plugins {
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.maven.publish)
 }
+
+apply(from = rootProject.file("gradle/hiredin-env.gradle.kts"))
+
+@Suppress("UNCHECKED_CAST")
+private val hiredinBuildConfigString =
+    extra["hiredinBuildConfigString"] as (String, String) -> String
 
 android {
     namespace = "com.nordstern.hiredin.shared"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
 
-        buildConfigField("String", "API_BASE_URL", "\"https://your-domain.com/api/mobile/v1/\"")
+        buildConfigField(
+            "String",
+            "API_BASE_URL",
+            hiredinBuildConfigString("API_BASE_URL", "https://your-domain.com/api/mobile/v1/")
+        )
         buildConfigField("String", "LIBRARY_VERSION", "\"1.0.0\"")
     }
 
@@ -49,12 +58,6 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-    }
-
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
     }
 }
 
@@ -116,41 +119,4 @@ dependencies {
     testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-}
-
-afterEvaluate {
-    publishing {
-        publications {
-            create<MavenPublication>("release") {
-                groupId = "com.nordstern.hiredin.shared"
-                artifactId = "shared"
-                version = "1.0.0"
-
-                from(components["release"])
-
-                pom {
-                    name.set("HiredIn Shared Library")
-                    description.set("Shared Android library for HiredIn mobile apps")
-                    url.set("https://github.com/NordsternBizSolutions/hiredin-shared")
-                    licenses {
-                        license {
-                            name.set("MIT License")
-                            url.set("https://opensource.org/licenses/MIT")
-                        }
-                    }
-                    developers {
-                        developer {
-                            name.set("Nordstern Biz Solutions")
-                            organization.set("NordsternBizSolutions")
-                        }
-                    }
-                    scm {
-                        connection.set("scm:git:git@github.com:NordsternBizSolutions/hiredin-shared.git")
-                        developerConnection.set("scm:git:git@github.com:NordsternBizSolutions/hiredin-shared.git")
-                        url.set("https://github.com/NordsternBizSolutions/hiredin-shared")
-                    }
-                }
-            }
-        }
-    }
 }

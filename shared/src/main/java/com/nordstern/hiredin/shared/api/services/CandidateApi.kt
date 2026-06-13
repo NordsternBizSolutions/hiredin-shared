@@ -32,11 +32,80 @@ interface CandidateApi {
     @POST(ApiEndpoints.Candidate.WORK_EXPERIENCE)
     suspend fun addWorkExperience(@Body body: WorkExperienceDto): ApiResponse<WorkExperienceDto>
 
+    @PUT("candidate/work-experience/{id}")
+    suspend fun updateWorkExperience(
+        @Path("id") id: String,
+        @Body body: WorkExperienceDto
+    ): ApiResponse<WorkExperienceDto>
+
+    @DELETE("candidate/work-experience/{id}")
+    suspend fun deleteWorkExperience(@Path("id") id: String): ApiResponse<Unit>
+
     @GET(ApiEndpoints.Candidate.EDUCATION)
     suspend fun getEducation(): ApiResponse<List<EducationDto>>
 
+    @POST(ApiEndpoints.Candidate.EDUCATION)
+    suspend fun addEducation(@Body body: EducationDto): ApiResponse<EducationDto>
+
+    @PUT("candidate/education/{id}")
+    suspend fun updateEducation(@Path("id") id: String, @Body body: EducationDto): ApiResponse<EducationDto>
+
+    @DELETE("candidate/education/{id}")
+    suspend fun deleteEducation(@Path("id") id: String): ApiResponse<Unit>
+
     @GET(ApiEndpoints.Candidate.SKILLS)
     suspend fun getSkills(): ApiResponse<List<SkillDto>>
+
+    @POST(ApiEndpoints.Candidate.SKILLS)
+    suspend fun addSkill(@Body body: SkillDto): ApiResponse<SkillDto>
+
+    @PUT("candidate/skills/{id}")
+    suspend fun updateSkill(@Path("id") id: String, @Body body: SkillDto): ApiResponse<SkillDto>
+
+    @DELETE("candidate/skills/{id}")
+    suspend fun deleteSkill(@Path("id") id: String): ApiResponse<Unit>
+
+    @GET(ApiEndpoints.Candidate.LANGUAGES)
+    suspend fun getLanguages(): ApiResponse<List<LanguageDto>>
+
+    @POST(ApiEndpoints.Candidate.LANGUAGES)
+    suspend fun addLanguage(@Body body: LanguageDto): ApiResponse<LanguageDto>
+
+    @PUT("candidate/languages/{id}")
+    suspend fun updateLanguage(@Path("id") id: String, @Body body: LanguageDto): ApiResponse<LanguageDto>
+
+    @DELETE("candidate/languages/{id}")
+    suspend fun deleteLanguage(@Path("id") id: String): ApiResponse<Unit>
+
+    @GET(ApiEndpoints.Candidate.CERTIFICATIONS)
+    suspend fun getCertifications(): ApiResponse<List<CertificationDto>>
+
+    @POST(ApiEndpoints.Candidate.CERTIFICATIONS)
+    suspend fun addCertification(@Body body: CertificationDto): ApiResponse<CertificationDto>
+
+    @PUT("candidate/certifications/{id}")
+    suspend fun updateCertification(
+        @Path("id") id: String,
+        @Body body: CertificationDto
+    ): ApiResponse<CertificationDto>
+
+    @DELETE("candidate/certifications/{id}")
+    suspend fun deleteCertification(@Path("id") id: String): ApiResponse<Unit>
+
+    @GET(ApiEndpoints.Candidate.SOCIAL_LINKS)
+    suspend fun getSocialLinks(): ApiResponse<List<SocialLinkDto>>
+
+    @POST(ApiEndpoints.Candidate.SOCIAL_LINKS)
+    suspend fun addSocialLink(@Body body: SocialLinkDto): ApiResponse<SocialLinkDto>
+
+    @PUT("candidate/social-links/{id}")
+    suspend fun updateSocialLink(@Path("id") id: String, @Body body: SocialLinkDto): ApiResponse<SocialLinkDto>
+
+    @DELETE("candidate/social-links/{id}")
+    suspend fun deleteSocialLink(@Path("id") id: String): ApiResponse<Unit>
+
+    @GET(ApiEndpoints.Candidate.CAREER_HUB)
+    suspend fun getCareerHub(): ApiResponse<CareerHubDto>
 
     @GET(ApiEndpoints.Candidate.APPLICATIONS_TRACKER)
     suspend fun getApplicationsTracker(
@@ -102,6 +171,8 @@ data class UpdateProfileRequest(
     val location: String? = null,
     val yearsExp: Int? = null,
     val expectedSalary: Int? = null,
+    val currentSalary: Int? = null,
+    val visaStatus: com.nordstern.hiredin.shared.models.enums.CandidateVisaStatus? = null,
     val openToWork: Boolean? = null
 )
 
@@ -125,6 +196,37 @@ data class EducationDto(
 
 data class SkillDto(val id: String? = null, val name: String, val level: String? = null)
 
+data class LanguageDto(
+    val id: String? = null,
+    val language: String,
+    val proficiency: String? = null
+)
+
+data class CertificationDto(
+    val id: String? = null,
+    val name: String,
+    val issuer: String,
+    val issueDate: String? = null,
+    val expiryDate: String? = null,
+    val credentialUrl: String? = null
+)
+
+data class SocialLinkDto(
+    val id: String? = null,
+    val platform: String,
+    val url: String
+)
+
+data class CareerHubDto(
+    val profileCompleteness: Int = 0,
+    val workExperienceCount: Int = 0,
+    val educationCount: Int = 0,
+    val skillsCount: Int = 0,
+    val certificationsCount: Int = 0,
+    val socialLinksCount: Int = 0,
+    val languagesCount: Int = 0
+)
+
 data class CandidateDashboardDto(
     val applicationsCount: Int = 0,
     val interviewsCount: Int = 0,
@@ -135,6 +237,7 @@ data class CandidateDashboardDto(
 data class ConversationDto(
     val id: String,
     val participantName: String,
+    val participantUserId: String? = null,
     val lastMessage: String? = null,
     val unreadCount: Int = 0
 )
