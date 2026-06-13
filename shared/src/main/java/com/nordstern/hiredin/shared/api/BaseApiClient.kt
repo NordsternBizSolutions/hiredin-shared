@@ -44,7 +44,7 @@ class BaseApiClient @Inject constructor(
 
     private fun buildRetrofit(client: OkHttpClient): Retrofit =
         Retrofit.Builder()
-            .baseUrl(BuildConfig.API_BASE_URL)
+            .baseUrl(ApiConfig.getBaseUrl())
             .client(client)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
