@@ -122,3 +122,27 @@ data class StatusHistoryEntry(
     val status: String,
     val at: Date
 )
+
+data class EmployerTask(
+    val id: String,
+    val title: String,
+    val description: String? = null,
+    val assigneeId: String? = null,
+    val companyId: String? = null,
+    val status: com.nordstern.hiredin.shared.models.enums.EmployerTaskStatus,
+    val dueDate: Date? = null,
+    val createdAt: Date,
+    val updatedAt: Date
+)
+
+data class PlatformNotification(
+    val id: String,
+    val userId: String,
+    val title: String,
+    val body: String,
+    val type: String,
+    val read: Boolean = false,
+    val deepLink: String? = null,
+    val createdAt: Date,
+    val updatedAt: Date
+)

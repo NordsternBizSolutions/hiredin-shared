@@ -1,5 +1,7 @@
-﻿package com.nordstern.hiredin.shared.analytics.events
+package com.nordstern.hiredin.shared.analytics.events
 
-object AnalyticsEvent {
-    // Stub implementation
-}
+data class AnalyticsEvent(
+    val name: String,
+    val properties: Map<String, Any> = emptyMap(),
+    val timestamp: Long = System.currentTimeMillis()
+)

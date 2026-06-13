@@ -1,5 +1,5 @@
-﻿package com.nordstern.hiredin.shared.network
+package com.nordstern.hiredin.shared.network
 
-class NetworkQuality {
-    // Stub implementation
+enum class NetworkQuality {
+    NONE, POOR, MODERATE, GOOD, EXCELLENT
 }

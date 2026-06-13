@@ -2,11 +2,13 @@ package com.nordstern.hiredin.shared.api
 
 import android.content.Context
 import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import com.nordstern.hiredin.shared.BuildConfig
+import com.nordstern.hiredin.shared.api.metrics.ApiMetricsCollector
 import com.nordstern.hiredin.shared.auth.TokenManager
 import com.nordstern.hiredin.shared.build.constants.ErrorCodes
 import com.nordstern.hiredin.shared.cache.DiskCache
+import com.nordstern.hiredin.shared.di.AuthenticatedClient
+import com.nordstern.hiredin.shared.di.UnauthenticatedClient
 import com.nordstern.hiredin.shared.network.NetworkManager
 import com.nordstern.hiredin.shared.utils.Logger
 import kotlinx.coroutines.Dispatchers
@@ -15,137 +17,99 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
-import okhttp3.Cache
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.io.File
 import java.io.IOException
 import java.net.SocketTimeoutException
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class BaseApiClient @Inject constructor(
     private val context: Context,
+    private val gson: Gson,
     private val tokenManager: TokenManager,
     private val networkManager: NetworkManager,
-    private val diskCache: DiskCache
+    private val diskCache: DiskCache,
+    private val metricsCollector: ApiMetricsCollector,
+    @UnauthenticatedClient private val okHttpClient: OkHttpClient,
+    @AuthenticatedClient private val authenticatedOkHttpClient: OkHttpClient
 ) {
     private val logger = Logger.getLogger("BaseApiClient")
-    val gson: Gson = GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").create()
 
-    private var retrofit: Retrofit? = null
-    private var authenticatedRetrofit: Retrofit? = null
+    val retrofit: Retrofit by lazy { buildRetrofit(okHttpClient) }
+    val authenticatedRetrofit: Retrofit by lazy { buildRetrofit(authenticatedOkHttpClient) }
 
-    private val okHttpClient: OkHttpClient by lazy { buildOkHttpClient(false) }
-    private val authenticatedOkHttpClient: OkHttpClient by lazy { buildOkHttpClient(true) }
-
-    private fun buildOkHttpClient(authenticated: Boolean): OkHttpClient {
-        val cacheDir = File(context.cacheDir, "http_cache")
-        val cache = Cache(cacheDir, 10L * 1024 * 1024)
-
-        val builder = OkHttpClient.Builder()
-            .cache(cache)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
-            .addInterceptor(CacheInterceptor())
-            .addInterceptor(RetryInterceptor())
-            .addInterceptor(LoggingInterceptor())
-
-        if (BuildConfig.DEBUG) {
-            builder.addInterceptor(
-                HttpLoggingInterceptor { message -> logger.debug("API: $message") }
-                    .apply { level = HttpLoggingInterceptor.Level.BODY }
-            )
-        }
-
-        if (authenticated) {
-            builder.addInterceptor(AuthInterceptor(tokenManager))
-        }
-
-        return builder.build()
-    }
+    private fun buildRetrofit(client: OkHttpClient): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(BuildConfig.API_BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
 
     fun getAuthenticatedOkHttpClient(): OkHttpClient = authenticatedOkHttpClient
 
-    private fun getRetrofit(): Retrofit {
-        if (retrofit == null) {
-            retrofit = Retrofit.Builder()
-                .baseUrl(BuildConfig.API_BASE_URL)
-                .client(okHttpClient)
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .build()
-        }
-        return retrofit!!
-    }
+    inline fun <reified T> createService(): T = retrofit.create(T::class.java)
 
-    private fun getAuthenticatedRetrofit(): Retrofit {
-        if (authenticatedRetrofit == null) {
-            authenticatedRetrofit = Retrofit.Builder()
-                .baseUrl(BuildConfig.API_BASE_URL)
-                .client(authenticatedOkHttpClient)
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .build()
-        }
-        return authenticatedRetrofit!!
-    }
-
-    inline fun <reified T> createService(): T = getRetrofit().create(T::class.java)
-
-    inline fun <reified T> createAuthenticatedService(): T = getAuthenticatedRetrofit().create(T::class.java)
+    inline fun <reified T> createAuthenticatedService(): T = authenticatedRetrofit.create(T::class.java)
 
     suspend fun <T> safeApiCall(
-        apiCall: suspend () -> ApiResponse<T>,
         retryCount: Int = 3,
-        retryDelayMs: Long = 1000
+        retryDelayMs: Long = 1000,
+        apiCall: suspend () -> ApiResponse<T>
     ): ApiResponse<T> = withContext(Dispatchers.IO) {
         var currentRetry = 0
+        val startTime = System.currentTimeMillis()
 
         while (currentRetry < retryCount) {
             try {
                 if (!networkManager.isNetworkAvailable()) {
-                    return@withContext ApiResponse.error(
-                        code = ErrorCodes.NO_INTERNET,
-                        message = "No internet connection"
-                    )
+                    metricsCollector.recordFailure("no_network", System.currentTimeMillis() - startTime)
+                    return@withContext ApiResponse.error(ErrorCodes.NO_INTERNET, "No internet connection")
                 }
 
                 val response = apiCall()
+                val duration = System.currentTimeMillis() - startTime
 
                 if (response.success) {
+                    metricsCollector.recordSuccess(duration)
                     return@withContext response
-                } else if (response.code == ErrorCodes.UNAUTHORIZED || response.code == ErrorCodes.SESSION_EXPIRED) {
-                    tokenManager.clearTokens()
-                    return@withContext ApiResponse.error(
-                        code = ErrorCodes.SESSION_EXPIRED,
-                        message = "Session expired. Please login again."
-                    )
                 }
+
+                if (response.code == ErrorCodes.UNAUTHORIZED || response.code == ErrorCodes.SESSION_EXPIRED) {
+                    tokenManager.clearTokens()
+                    metricsCollector.recordFailure(response.code ?: "auth", duration)
+                    return@withContext ApiResponse.error(ErrorCodes.SESSION_EXPIRED, "Session expired. Please login again.")
+                }
+
+                metricsCollector.recordFailure(response.code ?: "api_error", duration)
                 return@withContext response
             } catch (e: SocketTimeoutException) {
                 logger.warn("API call timeout, retry: $currentRetry", e)
                 currentRetry++
                 if (currentRetry < retryCount) delay(retryDelayMs * currentRetry)
-                else return@withContext ApiResponse.error(ErrorCodes.TIMEOUT, "Request timeout. Please try again.")
+                else {
+                    metricsCollector.recordFailure(ErrorCodes.TIMEOUT, System.currentTimeMillis() - startTime)
+                    return@withContext ApiResponse.error(ErrorCodes.TIMEOUT, "Request timeout. Please try again.")
+                }
             } catch (e: IOException) {
                 logger.warn("Network error, retry: $currentRetry", e)
                 currentRetry++
                 if (currentRetry < retryCount && networkManager.isNetworkAvailable()) {
                     delay(retryDelayMs * currentRetry)
                 } else {
+                    metricsCollector.recordFailure(ErrorCodes.NETWORK_ERROR, System.currentTimeMillis() - startTime)
                     return@withContext ApiResponse.error(ErrorCodes.NETWORK_ERROR, "Network error. Please check your connection.")
                 }
             } catch (e: HttpException) {
                 logger.error("HTTP error: ${e.code()}", e)
+                metricsCollector.recordFailure(e.code().toString(), System.currentTimeMillis() - startTime)
                 return@withContext ApiResponse.error(e.code().toString(), e.message() ?: "Server error occurred")
             } catch (e: Exception) {
                 logger.error("Unexpected error", e)
+                metricsCollector.recordFailure(ErrorCodes.UNKNOWN, System.currentTimeMillis() - startTime)
                 return@withContext ApiResponse.error(ErrorCodes.UNKNOWN, "An unexpected error occurred")
             }
         }
@@ -156,9 +120,8 @@ class BaseApiClient @Inject constructor(
     suspend fun <T> executeWithOfflineSupport(
         cacheKey: String,
         apiCall: suspend () -> ApiResponse<T>,
-        cacheCall: suspend () -> T? = { null },
-        clazz: Class<T>
-    ): Flow<ApiResponse<T>> = flow {
+        cacheCall: suspend () -> T? = { null }
+    ): Flow<ApiResponse<out T>> = flow {
         val cachedData = cacheCall()
         if (cachedData != null) {
             emit(ApiResponse.success(cachedData, isFromCache = true))
@@ -177,6 +140,6 @@ class BaseApiClient @Inject constructor(
         }
     }.catch { e ->
         logger.error("Flow error", e)
-        emit(ApiResponse.error(ErrorCodes.UNKNOWN, e.message ?: "Unknown error"))
+        emit(ApiResponse.error<T>(ErrorCodes.UNKNOWN, e.message ?: "Unknown error"))
     }
 }

@@ -1,5 +1,16 @@
-﻿package com.nordstern.hiredin.shared.permissions.permissions
+package com.nordstern.hiredin.shared.permissions.permissions
 
-object ContactsPermission {
-    // Stub implementation
+import android.Manifest
+import com.nordstern.hiredin.shared.permissions.PermissionManager
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class ContactsPermission @Inject constructor(
+    private val permissionManager: PermissionManager
+) {
+    val permission: String
+        get() = Manifest.permission.READ_CONTACTS
+
+    fun isGranted(): Boolean = permission.isNotEmpty() && permissionManager.isGranted(permission)
 }

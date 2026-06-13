@@ -1,50 +1,46 @@
 package com.nordstern.hiredin.shared.sync
 
-import android.content.Context
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.workDataOf
+import com.google.gson.Gson
+import com.google.gson.JsonElement
 import com.nordstern.hiredin.shared.api.BaseApiClient
 import com.nordstern.hiredin.shared.api.SyncApi
-import com.nordstern.hiredin.shared.build.constants.TimeConstants
 import com.nordstern.hiredin.shared.database.BaseDao
 import com.nordstern.hiredin.shared.database.SyncableEntity
 import com.nordstern.hiredin.shared.network.NetworkManager
+import com.nordstern.hiredin.shared.sync.conflict.ConflictHandler
+import com.nordstern.hiredin.shared.sync.strategies.SyncStrategy
 import com.nordstern.hiredin.shared.utils.Logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class SyncChangesResponse(
+    val entities: Map<String, List<JsonElement>> = emptyMap(),
+    val deletedIds: Map<String, List<String>> = emptyMap(),
+    val timestamp: Long? = null
+)
+
 @Singleton
 class SyncManager @Inject constructor(
-    private val context: Context,
     private val apiClient: BaseApiClient,
+    private val gson: Gson,
     private val networkManager: NetworkManager,
     private val offlineQueue: OfflineQueue,
-    private val conflictResolver: ConflictResolver
+    private val syncStrategy: SyncStrategy,
+    private val conflictHandler: ConflictHandler,
+    private val syncScheduler: SyncScheduler,
+    private val syncStateManager: SyncStateManager
 ) {
     private val logger = Logger.getLogger("SyncManager")
     private val mutex = Mutex()
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: Flow<SyncState> = _syncState.asStateFlow()
-
-    private val _lastSyncTimestamp = MutableStateFlow<Map<String, Long>>(emptyMap())
-    val lastSyncTimestamp: Flow<Map<String, Long>> = _lastSyncTimestamp.asStateFlow()
-
-    companion object {
-        private const val SYNC_WORK_NAME = "data_sync_work"
-    }
+    val lastSyncTimestamp = syncStateManager.lastSyncTimestamps
 
     sealed class SyncState {
         data object Idle : SyncState()
@@ -61,7 +57,6 @@ class SyncManager @Inject constructor(
         lastSync: Long? = null
     ): SyncResult {
         if (!networkManager.isNetworkAvailable()) {
-            logger.warn("Network unavailable, cannot sync $entityName")
             _syncState.value = SyncState.Offline
             return SyncResult.Offline
         }
@@ -69,9 +64,7 @@ class SyncManager @Inject constructor(
         return mutex.withLock {
             try {
                 _syncState.value = SyncState.InProgress
-                logger.info("Starting sync for $entityName")
-
-                val syncTimestamp = lastSync ?: _lastSyncTimestamp.value[entityName] ?: 0L
+                val syncTimestamp = lastSync ?: syncStateManager.getTimestamp(entityName)
 
                 val response = apiClient.safeApiCall {
                     apiClient.createAuthenticatedService<SyncApi>().getChanges(
@@ -81,40 +74,30 @@ class SyncManager @Inject constructor(
                 }
 
                 if (response.success && response.data != null) {
-                    val serverEntities = response.data.entities[entityName].orEmpty()
+                    val serverElements = response.data.entities[entityName].orEmpty()
                     val deletedIds = response.data.deletedIds[entityName].orEmpty()
 
-                    val typedServerEntities = serverEntities.mapNotNull { element ->
+                    val resolved = serverElements.mapNotNull { element ->
                         try {
-                            apiClient.gson.fromJson(element, entityClass)
+                            val server = gson.fromJson(element, entityClass)
+                            conflictHandler.resolve(dao.getById(server.id), server)
                         } catch (_: Exception) {
                             null
                         }
                     }
 
-                    val resolvedEntities = conflictResolver.resolveConflicts(
-                        localEntities = dao.getAll(),
-                        serverEntities = typedServerEntities
-                    )
-
-                    dao.insertAll(resolvedEntities)
+                    dao.insertAll(resolved)
                     deletedIds.forEach { dao.deleteById(it) }
 
                     val newTimestamp = response.data.timestamp ?: System.currentTimeMillis()
-                    updateLastSyncTimestamp(entityName, newTimestamp)
-
-                    logger.info("Sync completed for $entityName: ${resolvedEntities.size} entities synced")
+                    syncStateManager.updateTimestamp(entityName, newTimestamp)
                     _syncState.value = SyncState.Completed(newTimestamp)
 
-                    SyncResult.Success(
-                        syncedCount = resolvedEntities.size,
-                        deletedCount = deletedIds.size,
-                        timestamp = newTimestamp
-                    )
+                    SyncResult.Success(resolved.size, deletedIds.size, newTimestamp)
                 } else {
-                    logger.error("Sync failed for $entityName: ${response.error}")
-                    _syncState.value = SyncState.Failed(response.error ?: "Unknown error")
-                    SyncResult.Failure(response.error ?: "Sync failed")
+                    val error = response.error ?: "Sync failed"
+                    _syncState.value = SyncState.Failed(error)
+                    SyncResult.Failure(error)
                 }
             } catch (e: Exception) {
                 logger.error("Sync error for $entityName", e)
@@ -129,78 +112,23 @@ class SyncManager @Inject constructor(
     ): Map<String, SyncResult> {
         val results = mutableMapOf<String, SyncResult>()
         for ((entityName, config) in syncConfig) {
-            val result = syncEntityTyped(entityName, config.first, config.second)
+            @Suppress("UNCHECKED_CAST")
+            val result = syncEntity(
+                config.first as BaseDao<SyncableEntity>,
+                entityName,
+                config.second as Class<SyncableEntity>
+            )
             results[entityName] = result
-            if (result is SyncResult.Failure) {
-                logger.warn("Sync failed for $entityName, continuing with other entities")
-            }
         }
-
         if (results.values.all { it is SyncResult.Success || it is SyncResult.Offline }) {
-            processOfflineQueue()
+            offlineQueue.processQueue()
         }
         return results
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private suspend fun <T : SyncableEntity> syncEntityTyped(
-        entityName: String,
-        dao: BaseDao<out SyncableEntity>,
-        entityClass: Class<out SyncableEntity>
-    ): SyncResult = syncEntity(dao as BaseDao<T>, entityName, entityClass as Class<T>)
-
-    private suspend fun processOfflineQueue() {
-        val pendingActions = offlineQueue.getPendingActions()
-        if (pendingActions.isNotEmpty()) {
-            logger.info("Processing ${pendingActions.size} offline actions")
-            offlineQueue.processQueue()
-        }
-    }
-
-    private fun updateLastSyncTimestamp(entityName: String, timestamp: Long) {
-        val current = _lastSyncTimestamp.value.toMutableMap()
-        current[entityName] = timestamp
-        _lastSyncTimestamp.value = current
-    }
-
-    fun schedulePeriodicSync() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .setRequiresBatteryNotLow(true)
-            .build()
-
-        val syncRequest = PeriodicWorkRequestBuilder<SyncWorker>(
-            TimeConstants.SYNC_INTERVAL_HOURS, TimeUnit.HOURS
-        )
-            .setConstraints(constraints)
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
-            .build()
-
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            SYNC_WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
-            syncRequest
-        )
-        logger.info("Periodic sync scheduled every ${TimeConstants.SYNC_INTERVAL_HOURS} hours")
-    }
-
-    fun cancelPeriodicSync() {
-        WorkManager.getInstance(context).cancelUniqueWork(SYNC_WORK_NAME)
-        logger.info("Periodic sync cancelled")
-    }
-
-    fun triggerImmediateSync(entityName: String? = null) {
-        scheduleOneTimeSync(entityName ?: "all")
-    }
-
-    private fun scheduleOneTimeSync(entityName: String) {
-        val data = workDataOf("entity_name" to entityName)
-        val syncRequest = OneTimeWorkRequestBuilder<SyncWorker>()
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-            .setInputData(data)
-            .build()
-        WorkManager.getInstance(context).enqueue(syncRequest)
-    }
+    fun schedulePeriodicSync() = syncScheduler.schedulePeriodicSync()
+    fun cancelPeriodicSync() = syncScheduler.cancelPeriodicSync()
+    fun triggerImmediateSync(entityName: String? = null) = syncScheduler.scheduleImmediateSync(entityName)
 }
 
 sealed class SyncResult {

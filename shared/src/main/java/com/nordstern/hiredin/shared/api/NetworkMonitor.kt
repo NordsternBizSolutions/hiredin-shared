@@ -1,15 +1,14 @@
 package com.nordstern.hiredin.shared.api
 
-import android.content.Context
-import com.nordstern.hiredin.shared.utils.NetworkUtils
+import com.nordstern.hiredin.shared.network.ConnectivityObserver
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flow
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class NetworkMonitor(private val context: Context) {
-    fun observeNetworkStatus(): Flow<Boolean> = flow {
-        emit(NetworkUtils.isNetworkAvailable(context))
-    }.distinctUntilChanged()
-
-    fun isNetworkAvailable(): Boolean = NetworkUtils.isNetworkAvailable(context)
+@Singleton
+class NetworkMonitor @Inject constructor(
+    private val connectivityObserver: ConnectivityObserver
+) {
+    fun observeNetworkStatus(): Flow<Boolean> = connectivityObserver.observe()
+    fun isNetworkAvailable(): Boolean = connectivityObserver.isCurrentlyConnected()
 }

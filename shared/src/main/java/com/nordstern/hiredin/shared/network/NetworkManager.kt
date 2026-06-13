@@ -1,6 +1,5 @@
 ﻿package com.nordstern.hiredin.shared.network
 
-import android.content.Context
 import com.nordstern.hiredin.shared.utils.NetworkUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,16 +9,19 @@ import javax.inject.Singleton
 
 @Singleton
 class NetworkManager @Inject constructor(
-    private val context: Context
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
+    private val connectivityObserver: ConnectivityObserver
 ) {
-    private val _isConnected = MutableStateFlow(isNetworkAvailable())
-    val isConnected: Flow<Boolean> = _isConnected.asStateFlow()
+    private val _isConnected = MutableStateFlow(connectivityObserver.isCurrentlyConnected())
+    val isConnected: Flow<Boolean> = connectivityObserver.observe()
 
-    fun isNetworkAvailable(): Boolean = NetworkUtils.isNetworkAvailable(context)
+    fun isNetworkAvailable(): Boolean = connectivityObserver.isCurrentlyConnected()
 
     fun isWifiConnected(): Boolean = NetworkUtils.isWifiConnected(context)
 
+    val networkQuality: kotlinx.coroutines.flow.StateFlow<NetworkQuality> = connectivityObserver.networkQuality
+
     fun updateConnectionState() {
-        _isConnected.value = isNetworkAvailable()
+        _isConnected.value = connectivityObserver.isCurrentlyConnected()
     }
 }

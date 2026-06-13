@@ -14,6 +14,7 @@ import com.nordstern.hiredin.shared.api.BaseApiClient
 import com.nordstern.hiredin.shared.api.DeviceApi
 import com.nordstern.hiredin.shared.api.DeviceRegisterRequest
 import com.nordstern.hiredin.shared.auth.TokenManager
+import com.nordstern.hiredin.shared.notifications.channels.ChannelManager
 import com.nordstern.hiredin.shared.utils.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +37,7 @@ import javax.inject.Singleton
 @Singleton
 class PushNotificationHandler @Inject constructor(
     private val context: Context,
-    private val notificationChannelManager: NotificationChannelManager,
+    private val channelManager: ChannelManager,
     private val apiClient: BaseApiClient,
     private val tokenManager: TokenManager
 ) {
@@ -126,22 +127,8 @@ class PushNotificationHandler @Inject constructor(
         deepLink: String? = null
     ) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelId = notificationChannelManager.getChannelIdForType(type)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                notificationChannelManager.getChannelNameForType(type),
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notifications for $type"
-                enableLights(true)
-                lightColor = Color.BLUE
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 500, 200, 500)
-            }
-            notificationManager.createNotificationChannel(channel)
-        }
+        val channelId = channelManager.getChannelIdForType(type)
+        channelManager.ensureChannel(type)
 
         val intent = Intent(Intent.ACTION_VIEW).apply {
             deepLink?.let { data = android.net.Uri.parse(it) }
@@ -192,20 +179,4 @@ class PushNotificationHandler @Inject constructor(
 
     private fun generateNotificationId(): Int =
         NOTIFICATION_ID_BASE + (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
-}
-
-@Singleton
-class NotificationChannelManager @Inject constructor() {
-    fun getChannelIdForType(type: String): String = "hiredin_channel_$type"
-
-    fun getChannelNameForType(type: String): String = when (type) {
-        PushNotificationHandler.NOTIFICATION_TYPE_LEAVE -> "Leave Notifications"
-        PushNotificationHandler.NOTIFICATION_TYPE_PAYROLL -> "Payroll Notifications"
-        PushNotificationHandler.NOTIFICATION_TYPE_ANNOUNCEMENT -> "Announcements"
-        PushNotificationHandler.NOTIFICATION_TYPE_TASK -> "Task Notifications"
-        PushNotificationHandler.NOTIFICATION_TYPE_APPROVAL -> "Approval Notifications"
-        PushNotificationHandler.NOTIFICATION_TYPE_COMPLIANCE -> "Compliance Alerts"
-        PushNotificationHandler.NOTIFICATION_TYPE_RECOGNITION -> "Recognition & Rewards"
-        else -> "General Notifications"
-    }
 }

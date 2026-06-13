@@ -1,26 +1,27 @@
 # HiredIn Shared Library
 
-Android shared library for HiredIn mobile apps (Candidate, Employer, HRMS, ESS).
+Enterprise-grade Android shared library for HiredIn mobile apps (Candidate, Employer, HRMS, ESS).
 
-**Package:** `com.nordstern.hiredin.shared`  
-**Version:** 1.0.0
+**Package:** `com.nordstern.hiredin.shared` | **Version:** `1.0.0`
 
-## Features
+## Architecture
 
-- **API Client** — Retrofit wrapper with retry, offline cache, and error handling
-- **Authentication** — Encrypted token storage, auto-refresh, biometric auth
-- **Sync** — Incremental data sync with conflict resolution
-- **Offline Queue** — Queue actions when offline with retry logic
-- **Push Notifications** — Eclipse Paho MQTT (enterprise open-source, no Firebase)
-- **UI Components** — Compose theme, buttons, dialogs, charts, forms
-- **Utils** — Logger, CryptoUtils, NetworkUtils, PermissionHelper
+| Layer | Components |
+|-------|------------|
+| **DI** | Hilt modules: Network, Database, Sync, Analytics, Notifications |
+| **API** | Retrofit + OkHttp, certificate pinning, metrics, retry, offline cache |
+| **Auth** | Encrypted tokens (AES-GCM), auto-refresh, biometric, session management |
+| **Database** | Room with migrations, type converters, offline action queue |
+| **Sync** | Incremental/full/smart strategies, conflict resolution, WorkManager |
+| **Push** | Eclipse Paho MQTT (enterprise open-source), typed notification handlers |
+| **UI** | Material3 Compose design system with 50+ production components |
+| **Security** | KeyStore, secure storage, fail-closed encryption, cert pinning |
 
 ## Adding to your project
 
 ### Step 1: Add JitPack repository
 
 ```kotlin
-// settings.gradle.kts
 dependencyResolutionManagement {
     repositories {
         google()
@@ -33,16 +34,14 @@ dependencyResolutionManagement {
 ### Step 2: Add dependency
 
 ```kotlin
-// app/build.gradle.kts
 dependencies {
     implementation("com.github.NordsternBizSolutions:hiredin-shared:1.0.0")
 }
 ```
 
-### Step 3: Enable Hilt in your app
+### Step 3: Enable Hilt
 
 ```kotlin
-// app/build.gradle.kts
 plugins {
     id("com.google.dagger.hilt.android")
     kotlin("kapt")
@@ -53,7 +52,7 @@ dependencies {
 }
 ```
 
-### Step 4: Initialize in Application class
+### Step 4: Initialize
 
 ```kotlin
 @HiltAndroidApp
@@ -65,91 +64,38 @@ class MyApplication : Application() {
 }
 ```
 
-### Step 5: Configure API base URL (optional)
-
-Override in your app's `build.gradle.kts`:
+## Usage
 
 ```kotlin
-android {
-    defaultConfig {
-        buildConfigField("String", "API_BASE_URL", "\"https://your-domain.com/api/mobile/v1/\"")
-    }
-}
-```
-
-## Usage Examples
-
-### Authentication
-
-```kotlin
+// Auth
 @Inject lateinit var authenticator: Authenticator
-
-// Login
 authenticator.login("user@example.com", "password")
 
-// Logout
-authenticator.logout()
-```
-
-### API Calls
-
-```kotlin
+// API
 @Inject lateinit var apiClient: BaseApiClient
-
 val response = apiClient.safeApiCall {
     apiClient.createAuthenticatedService<AuthApi>().me()
 }
-```
 
-### Sync
-
-```kotlin
+// Sync
 @Inject lateinit var syncManager: SyncManager
-
 syncManager.schedulePeriodicSync()
-syncManager.triggerImmediateSync()
-```
 
-### Push Notifications (MQTT)
-
-```kotlin
+// MQTT Push
 @Inject lateinit var pushHandler: PushNotificationHandler
+pushHandler.connect("ssl://mqtt.your-domain.com:8883", "hiredin/notifications/{userId}")
 
-// Connect to your MQTT broker
-pushHandler.connect(
-    brokerUrl = "ssl://mqtt.your-domain.com:8883",
-    topic = "hiredin/notifications/{userId}"
-)
-```
-
-### UI Theme
-
-```kotlin
+// UI
 HiredInTheme {
-    // Your Compose content
+    HiredInTextField(value, onValueChange, label = "Email")
+    LoadingButton("Submit", isLoading, onClick = { })
+    EmptyState(title = "No jobs", actionLabel = "Browse", onAction = { })
 }
-```
-
-## Architecture
-
-```
-Shared Library
-├── API (Retrofit, interceptors, error handling)
-├── Auth (tokens, biometric, session)
-├── Database (Room, sync entities)
-├── Sync (incremental sync, offline queue)
-├── Notifications (MQTT push, channels)
-├── UI (Compose components, theme)
-└── Utils (logging, crypto, network, permissions)
 ```
 
 ## Version History
 
-- **1.0.0** — Initial release
-
-## License
-
-MIT License
+- **1.0.0** — Enterprise initial release
 
 ## Repository
 

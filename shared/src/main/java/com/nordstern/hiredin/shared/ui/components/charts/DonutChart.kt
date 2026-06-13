@@ -1,5 +1,8 @@
-﻿package com.nordstern.hiredin.shared.ui.components.charts
+package com.nordstern.hiredin.shared.ui.components.charts
 
-object DonutChart {
-    fun Placeholder() {}
-}
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+
+@Composable
+fun DonutChart(points: List<ChartPoint>, modifier: Modifier = Modifier, title: String? = null) =
+    BarChart(points, modifier, title)

@@ -1,5 +1,7 @@
-﻿package com.nordstern.hiredin.shared.database.migrations
+package com.nordstern.hiredin.shared.database.migrations
+
+import androidx.room.migration.Migration
 
 object MigrationHelper {
-    // Stub implementation
+    val ALL: Array<Migration> = arrayOf(Migration_1_2, Migration_2_3)
 }

@@ -50,9 +50,15 @@ class TokenManager @Inject constructor(
         private val DEVICE_ID_KEY = stringPreferencesKey("device_id")
     }
 
+    private fun safeDecrypt(value: String?): String? = try {
+        value?.let { encryptionManager.decrypt(it) }
+    } catch (_: com.nordstern.hiredin.shared.security.EncryptionException) {
+        null
+    }
+
     private val authFlow: Flow<AuthState> = context.authDataStore.data.map { preferences ->
-        val accessToken = preferences[ACCESS_TOKEN_KEY]?.let { encryptionManager.decrypt(it) }
-        val refreshToken = preferences[REFRESH_TOKEN_KEY]?.let { encryptionManager.decrypt(it) }
+        val accessToken = safeDecrypt(preferences[ACCESS_TOKEN_KEY])
+        val refreshToken = safeDecrypt(preferences[REFRESH_TOKEN_KEY])
         val expiry = preferences[TOKEN_EXPIRY_KEY]?.toLongOrNull()
         AuthState(
             accessToken = accessToken,
@@ -126,7 +132,7 @@ class TokenManager @Inject constructor(
     }
 
     suspend fun getDeviceId(): String? =
-        context.authDataStore.data.first()[DEVICE_ID_KEY]?.let { encryptionManager.decrypt(it) }
+        safeDecrypt(context.authDataStore.data.first()[DEVICE_ID_KEY])
 
     suspend fun saveUserId(userId: String) {
         context.authDataStore.edit { preferences ->
@@ -135,7 +141,7 @@ class TokenManager @Inject constructor(
     }
 
     suspend fun getUserId(): String? =
-        context.authDataStore.data.first()[USER_ID_KEY]?.let { encryptionManager.decrypt(it) }
+        safeDecrypt(context.authDataStore.data.first()[USER_ID_KEY])
 
     fun observeAuthState(): Flow<AuthState> = authFlow
 }

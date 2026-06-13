@@ -12,17 +12,20 @@ import dagger.assisted.AssistedInject
 class SyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val offlineQueue: OfflineQueue
+    private val offlineQueue: OfflineQueue,
+    private val syncManager: SyncManager
 ) : CoroutineWorker(context, params) {
 
     private val logger = Logger.getLogger("SyncWorker")
 
     override suspend fun doWork(): Result {
-        val entityName = inputData.getString("entity_name") ?: "all"
-        logger.info("Starting sync worker for: $entityName")
-
+        val entityName = inputData.getString("entity_name")
+        logger.info("Sync worker started: ${entityName ?: "queue-only"}")
         return try {
             offlineQueue.processQueue()
+            if (entityName != null && entityName != "all") {
+                syncManager.triggerImmediateSync(entityName)
+            }
             Result.success()
         } catch (e: Exception) {
             logger.error("Sync worker failed", e)

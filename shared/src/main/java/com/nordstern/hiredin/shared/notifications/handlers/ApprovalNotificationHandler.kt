@@ -1,5 +1,9 @@
-﻿package com.nordstern.hiredin.shared.notifications.handlers
+package com.nordstern.hiredin.shared.notifications.handlers
 
-class ApprovalNotificationHandler {
-    // Stub implementation
-}
+import com.nordstern.hiredin.shared.notifications.PushNotificationHandler
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class ApprovalNotificationHandler @Inject constructor(push: PushNotificationHandler) :
+    BaseNotificationHandler(push, PushNotificationHandler.NOTIFICATION_TYPE_APPROVAL)

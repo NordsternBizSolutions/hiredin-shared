@@ -1,3 +1,7 @@
 ﻿package com.nordstern.hiredin.shared.sync.conflict
 
-interface ConflictHandler
+import com.nordstern.hiredin.shared.database.SyncableEntity
+
+interface ConflictHandler {
+    fun <T : SyncableEntity> resolve(local: T?, server: T): T
+}

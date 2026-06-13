@@ -52,24 +52,3 @@ class Authenticator @Inject constructor(
         return Result.success(Unit)
     }
 }
-
-@Singleton
-class SessionManager @Inject constructor() {
-    private val _isLoggedIn = MutableStateFlow(false)
-    val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
-
-    fun onLogin(userId: String) {
-        _isLoggedIn.value = true
-    }
-
-    fun onLogout() {
-        _isLoggedIn.value = false
-    }
-}
-
-@Singleton
-class AuthStateManager @Inject constructor(
-    private val tokenManager: TokenManager
-) {
-    fun observeAuthState() = tokenManager.observeAuthState()
-}

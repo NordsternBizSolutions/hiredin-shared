@@ -1,5 +1,10 @@
-﻿package com.nordstern.hiredin.shared.workers.constraints
+package com.nordstern.hiredin.shared.workers.constraints
 
-class TimeConstraint {
-    // Stub implementation
+import androidx.work.Constraints
+import java.util.concurrent.TimeUnit
+
+object TimeConstraint {
+    fun withDelay(minutes: Long): Long = TimeUnit.MINUTES.toMillis(minutes)
+
+    fun idle(): Constraints = Constraints.Builder().build()
 }

@@ -1,5 +1,9 @@
-﻿package com.nordstern.hiredin.shared.workers.constraints
+package com.nordstern.hiredin.shared.workers.constraints
 
-class StorageConstraint {
-    // Stub implementation
+import androidx.work.Constraints
+
+object StorageConstraint {
+    fun notLow(): Constraints = Constraints.Builder()
+        .setRequiresStorageNotLow(true)
+        .build()
 }

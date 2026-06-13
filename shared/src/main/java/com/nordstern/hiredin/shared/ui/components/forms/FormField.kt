@@ -1,5 +1,8 @@
-﻿package com.nordstern.hiredin.shared.ui.components.forms
+package com.nordstern.hiredin.shared.ui.components.forms
 
-object FormField {
-    fun Placeholder() {}
-}
+data class FormField(
+    val key: String,
+    val label: String,
+    val required: Boolean = false,
+    val validator: (String) -> String? = { null }
+)

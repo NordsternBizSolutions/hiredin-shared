@@ -1,5 +1,9 @@
-﻿package com.nordstern.hiredin.shared.analytics.events
+package com.nordstern.hiredin.shared.analytics.events
 
-object ErrorEvent {
-    // Stub implementation
+data class ErrorEvent(
+    val name: String,
+    val properties: Map<String, Any> = emptyMap(),
+    val timestamp: Long = System.currentTimeMillis()
+) {
+    fun toAnalyticsEvent(): AnalyticsEvent = AnalyticsEvent(name, properties, timestamp)
 }

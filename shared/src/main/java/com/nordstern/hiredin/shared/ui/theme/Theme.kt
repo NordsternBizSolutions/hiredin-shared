@@ -1,38 +1,62 @@
 ﻿package com.nordstern.hiredin.shared.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-private val LightColors = lightColorScheme(
-    primary = Color(0xFF1A56DB),
-    onPrimary = Color.White,
-    secondary = Color(0xFF0E9F6E),
-    background = Color(0xFFF9FAFB),
-    surface = Color.White,
-    error = Color(0xFFE02424)
+private val LightColorScheme = lightColorScheme(
+    primary = HiredInColors.Primary,
+    onPrimary = HiredInColors.OnPrimary,
+    secondary = HiredInColors.Secondary,
+    background = HiredInColors.Background,
+    surface = HiredInColors.Surface,
+    surfaceVariant = HiredInColors.SurfaceVariant,
+    error = HiredInColors.Error,
+    onBackground = HiredInColors.OnBackground,
+    onSurface = HiredInColors.OnSurface,
+    onSurfaceVariant = HiredInColors.OnSurfaceVariant,
+    outline = HiredInColors.Outline
 )
 
-private val DarkColors = darkColorScheme(
-    primary = Color(0xFF3B82F6),
-    onPrimary = Color.White,
-    secondary = Color(0xFF10B981),
-    background = Color(0xFF111827),
-    surface = Color(0xFF1F2937),
-    error = Color(0xFFF87171)
+private val DarkColorScheme = darkColorScheme(
+    primary = HiredInDarkColors.Primary,
+    onPrimary = HiredInColors.OnPrimary,
+    secondary = HiredInColors.Secondary,
+    background = HiredInDarkColors.Background,
+    surface = HiredInDarkColors.Surface,
+    surfaceVariant = HiredInDarkColors.SurfaceVariant,
+    error = HiredInColors.Error,
+    onBackground = HiredInDarkColors.OnBackground,
+    onSurface = HiredInDarkColors.OnSurface,
+    outline = HiredInDarkColors.Outline
 )
+
+data class ExtendedColors(
+    val success: Color = HiredInColors.Success,
+    val warning: Color = HiredInColors.Warning,
+    val info: Color = HiredInColors.Info
+)
+
+val LocalExtendedColors = staticCompositionLocalOf { ExtendedColors() }
 
 @Composable
 fun HiredInTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = colorScheme,
         typography = HiredInTypography,
-        content = content
+        shapes = HiredInShapes,
+        content = {
+            CompositionLocalProvider(LocalExtendedColors provides ExtendedColors()) {
+                content()
+            }
+        }
     )
 }
