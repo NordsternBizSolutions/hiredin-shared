@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hiredin_app_name">HiredIn</string>
+    <string name="hiredin_loading">Loading…</string>
+    <string name="hiredin_error_generic">Something went wrong. Please try again.</string>
+    <string name="hiredin_no_internet">No internet connection</string>
+    <string name="hiredin_retry">Retry</string>
+    <string name="hiredin_cancel">Cancel</string>
+    <string name="hiredin_confirm">Confirm</string>
+    <string name="hiredin_search">Search</string>
+    <string name="hiredin_empty_state">No data available</string>
+    <string name="hiredin_session_expired">Session expired. Please login again.</string>
+    <string name="hiredin_biometric_title">Authenticate</string>
+    <string name="hiredin_biometric_subtitle">Use biometric to continue</string>
+</resources>

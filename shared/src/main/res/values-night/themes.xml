@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.HiredIn" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/hiredin_primary</item>
+        <item name="android:colorBackground">@color/hiredin_background</item>
+    </style>
+</resources>

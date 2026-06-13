@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="hiredin_padding_small">8dp</dimen>
+    <dimen name="hiredin_padding_medium">16dp</dimen>
+    <dimen name="hiredin_padding_large">24dp</dimen>
+    <dimen name="hiredin_corner_radius">12dp</dimen>
+    <dimen name="hiredin_button_height">48dp</dimen>
+    <dimen name="hiredin_icon_size">24dp</dimen>
+</resources>
