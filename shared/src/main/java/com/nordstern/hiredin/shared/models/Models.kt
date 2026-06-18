@@ -40,22 +40,6 @@ data class CandidateProfile(
     val avatarUrl: String? = null
 )
 
-data class Job(
-    val id: String,
-    val companyId: String? = null,
-    val title: String,
-    val description: String,
-    val location: String? = null,
-    val employment: EmploymentType? = null,
-    val status: JobStatus,
-    val salaryMin: Int? = null,
-    val salaryMax: Int? = null,
-    val currency: String? = "USD",
-    val publishedAt: Date? = null,
-    val postingMetadata: JsonObject? = null,
-    val deletedAt: Date? = null
-)
-
 data class Application(
     val id: String,
     val jobId: String,

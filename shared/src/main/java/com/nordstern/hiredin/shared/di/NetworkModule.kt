@@ -3,7 +3,13 @@ package com.nordstern.hiredin.shared.di
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.reflect.TypeToken
+import com.nordstern.hiredin.shared.api.FlexibleInterviewListDeserializer
+import com.nordstern.hiredin.shared.api.FlexibleUpcomingInterviewListDeserializer
+import com.nordstern.hiredin.shared.api.UpcomingInterviewDto
+import com.nordstern.hiredin.shared.api.services.InterviewDto
 import com.nordstern.hiredin.shared.BuildConfig
+import com.nordstern.hiredin.shared.api.MobileClientInterceptor
 import com.nordstern.hiredin.shared.api.AuthInterceptor
 import com.nordstern.hiredin.shared.api.CacheInterceptor
 import com.nordstern.hiredin.shared.api.LoggingInterceptor
@@ -42,6 +48,14 @@ object NetworkModule {
     fun provideGson(): Gson = GsonBuilder()
         .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
         .serializeNulls()
+        .registerTypeAdapter(
+            object : TypeToken<List<InterviewDto>>() {}.type,
+            FlexibleInterviewListDeserializer()
+        )
+        .registerTypeAdapter(
+            object : TypeToken<List<UpcomingInterviewDto>>() {}.type,
+            FlexibleUpcomingInterviewListDeserializer()
+        )
         .create()
 
     @Provides
@@ -49,7 +63,8 @@ object NetworkModule {
     @UnauthenticatedClient
     fun provideOkHttpClient(
         @ApplicationContext context: Context,
-        certificatePinner: CertificatePinner
+        certificatePinner: CertificatePinner,
+        tokenManager: TokenManager
     ): OkHttpClient {
         val logger = Logger.getLogger("OkHttp")
         val cacheDir = File(context.cacheDir, "http_cache")
@@ -62,6 +77,7 @@ object NetworkModule {
             .writeTimeout(TimeConstants.WRITE_TIMEOUT, TimeUnit.MILLISECONDS)
             .retryOnConnectionFailure(true)
             .certificatePinner(certificatePinner.build())
+            .addInterceptor(MobileClientInterceptor(tokenManager))
             .addInterceptor(CacheInterceptor())
             .addInterceptor(RetryInterceptor())
             .addInterceptor(LoggingInterceptor())

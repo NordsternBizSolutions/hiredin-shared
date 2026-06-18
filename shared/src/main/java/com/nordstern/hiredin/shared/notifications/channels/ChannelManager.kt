@@ -4,6 +4,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.graphics.Color
+import android.media.AudioAttributes
+import android.provider.Settings
 import android.os.Build
 import com.nordstern.hiredin.shared.notifications.PushNotificationHandler
 import javax.inject.Inject
@@ -43,7 +45,15 @@ class ChannelManager @Inject constructor(
             enableLights(true)
             lightColor = Color.BLUE
             enableVibration(true)
-            vibrationPattern = longArrayOf(0, 500, 200, 500)
+            vibrationPattern = longArrayOf(0, 250, 120, 250)
+            val soundUri = Settings.System.DEFAULT_NOTIFICATION_URI
+            setSound(
+                soundUri,
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
         }
         notificationManager.createNotificationChannel(channel)
     }

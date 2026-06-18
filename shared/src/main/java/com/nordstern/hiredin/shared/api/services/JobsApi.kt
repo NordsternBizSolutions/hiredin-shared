@@ -2,8 +2,8 @@ package com.nordstern.hiredin.shared.api.services
 
 import com.google.gson.JsonObject
 import com.nordstern.hiredin.shared.api.ApiResponse
+import com.nordstern.hiredin.shared.api.JobListItemDto
 import com.nordstern.hiredin.shared.build.constants.ApiEndpoints
-import com.nordstern.hiredin.shared.models.Job
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -17,40 +17,45 @@ interface JobsApi {
     suspend fun search(
         @Query("q") query: String? = null,
         @Query("location") location: String? = null,
-        @Query("employment") employment: String? = null,
+        @Query("jobTypes") jobTypes: String? = null,
         @Query("salaryMin") salaryMin: Int? = null,
         @Query("salaryMax") salaryMax: Int? = null,
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20,
-        @Query("cursor") cursor: String? = null
-    ): ApiResponse<List<Job>>
+        @Query("sortBy") sortBy: String? = null
+    ): ApiResponse<List<JobListItemDto>>
 
     @GET(ApiEndpoints.Jobs.DETAIL)
-    suspend fun getJob(@Path("id") jobId: String): ApiResponse<Job>
+    suspend fun getJob(@Path("jobId") jobId: String): ApiResponse<JobListItemDto>
 
     @POST(ApiEndpoints.Jobs.APPLY)
     suspend fun apply(
-        @Path("id") jobId: String,
+        @Path("jobId") jobId: String,
         @Body body: JobApplyRequest
     ): ApiResponse<JobApplyResponse>
 
     @POST(ApiEndpoints.Jobs.SAVE)
-    suspend fun saveJob(@Path("id") jobId: String): ApiResponse<Unit>
-
-    @POST(ApiEndpoints.Jobs.UNSAVE)
-    suspend fun unsaveJob(@Path("id") jobId: String): ApiResponse<Unit>
+    suspend fun saveJob(@Body body: SaveJobRequest): ApiResponse<Unit>
 
     @GET(ApiEndpoints.Jobs.RECOMMENDED)
     suspend fun getRecommended(
         @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 20
-    ): ApiResponse<List<Job>>
+        @Query("limit") limit: Int = 20,
+        @Query("sortBy") sortBy: String = "newest"
+    ): ApiResponse<List<JobListItemDto>>
+
+    @GET(ApiEndpoints.Candidate.MATCHING_JOBS)
+    suspend fun getMatchingJobs(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20,
+        @Query("cursor") cursor: String? = null
+    ): ApiResponse<com.nordstern.hiredin.shared.api.PaginatedMatchingJobsDto>
 
     @GET(ApiEndpoints.Jobs.SIMILAR)
     suspend fun getSimilar(
-        @Path("id") jobId: String,
+        @Path("jobId") jobId: String,
         @Query("limit") limit: Int = 10
-    ): ApiResponse<List<Job>>
+    ): ApiResponse<List<JobListItemDto>>
 
     @GET(ApiEndpoints.Jobs.FILTERS)
     suspend fun getFilters(): ApiResponse<JobFiltersDto>
@@ -68,7 +73,15 @@ data class JobApplyRequest(
     val answers: JsonObject? = null
 )
 
-data class JobApplyResponse(val applicationId: String, val status: String)
+data class SaveJobRequest(val jobId: String, val isSaved: Boolean = false)
+
+data class JobApplyResponse(
+    val applicationId: String? = null,
+    val id: String? = null,
+    val status: String? = null
+) {
+    fun resolvedApplicationId(): String = applicationId ?: id ?: ""
+}
 
 data class JobFiltersDto(
     val locations: List<String> = emptyList(),

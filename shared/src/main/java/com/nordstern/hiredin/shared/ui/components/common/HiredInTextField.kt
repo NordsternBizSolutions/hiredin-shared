@@ -16,7 +16,9 @@ fun HiredInTextField(
     error: String? = null,
     enabled: Boolean = true,
     singleLine: Boolean = true,
-    placeholder: String? = null
+    placeholder: String? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -27,6 +29,8 @@ fun HiredInTextField(
         supportingText = error?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
         enabled = enabled,
         singleLine = singleLine,
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
         modifier = modifier.fillMaxWidth()
     )
 }

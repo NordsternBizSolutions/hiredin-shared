@@ -1,11 +1,13 @@
 package com.nordstern.hiredin.shared.api
 
 import com.nordstern.hiredin.shared.api.services.CandidateApi
+import com.nordstern.hiredin.shared.api.services.CandidateSettingsApi
 import com.nordstern.hiredin.shared.api.services.EmployerApi
 import com.nordstern.hiredin.shared.api.services.EssApi
 import com.nordstern.hiredin.shared.api.services.HrmsApi
 import com.nordstern.hiredin.shared.api.services.JobsApi
 import com.nordstern.hiredin.shared.api.services.NotificationsApi
+import com.nordstern.hiredin.shared.api.services.SubscriptionApi
 import com.nordstern.hiredin.shared.sync.SyncChangesResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -26,11 +28,13 @@ class HiredInApiRegistry @Inject constructor(
     val sync: SyncApi get() = apiClient.createAuthenticatedService()
     val devices: DeviceApi get() = apiClient.createAuthenticatedService()
     val candidate: CandidateApi get() = apiClient.createAuthenticatedService()
+    val candidateSettings: CandidateSettingsApi get() = apiClient.createAuthenticatedService()
     val jobs: JobsApi get() = apiClient.createAuthenticatedService()
     val employer: EmployerApi get() = apiClient.createAuthenticatedService()
     val hrms: HrmsApi get() = apiClient.createAuthenticatedService()
     val ess: EssApi get() = apiClient.createAuthenticatedService()
     val notifications: NotificationsApi get() = apiClient.createAuthenticatedService()
+    val subscription: SubscriptionApi get() = apiClient.createAuthenticatedService()
 
     suspend fun <T> call(block: suspend () -> ApiResponse<T>): ApiResponse<T> =
         apiClient.safeApiCall(apiCall = block)

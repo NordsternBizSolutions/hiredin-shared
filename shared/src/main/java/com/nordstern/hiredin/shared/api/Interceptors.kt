@@ -8,21 +8,29 @@ import okhttp3.Interceptor
 import okhttp3.Response
 import java.io.IOException
 
-class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
+/** Adds mobile client metadata on every request (including unauthenticated login). */
+class MobileClientInterceptor(private val tokenManager: TokenManager) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val original = chain.request()
-        val token = runBlocking { tokenManager.getAccessToken() }
-        val deviceId = runBlocking { tokenManager.getDeviceId() }
-
-        val builder = original.newBuilder()
-        if (token != null) {
-            builder.header(ApiConstants.HEADER_AUTHORIZATION, "${ApiConstants.BEARER_PREFIX}$token")
-        }
-        if (deviceId != null) {
+        val builder = chain.request().newBuilder()
+        runBlocking { tokenManager.getDeviceId() }?.let { deviceId ->
             builder.header(ApiConstants.HEADER_DEVICE_ID, deviceId)
         }
-        builder.header("X-Client-Type", SharedConstants.DEVICE_TYPE_ANDROID)
+        builder.header(ApiConstants.HEADER_CLIENT_TYPE, SharedConstants.DEVICE_TYPE_ANDROID)
         return chain.proceed(builder.build())
+    }
+}
+
+class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val token = runBlocking { tokenManager.getAccessToken() }
+        val request = if (token != null) {
+            chain.request().newBuilder()
+                .header(ApiConstants.HEADER_AUTHORIZATION, "${ApiConstants.BEARER_PREFIX}$token")
+                .build()
+        } else {
+            chain.request()
+        }
+        return chain.proceed(request)
     }
 }
 

@@ -5,6 +5,7 @@ import com.nordstern.hiredin.shared.build.constants.ApiEndpoints
 import com.nordstern.hiredin.shared.notifications.models.Notification
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -15,17 +16,17 @@ interface NotificationsApi {
     @GET(ApiEndpoints.Notifications.LIST)
     suspend fun getNotifications(
         @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 20,
+        @Query("limit") limit: Int = 100,
         @Query("unreadOnly") unreadOnly: Boolean = false
     ): ApiResponse<List<Notification>>
 
     @GET(ApiEndpoints.Notifications.DETAIL)
     suspend fun getNotification(@Path("id") notificationId: String): ApiResponse<Notification>
 
-    @POST("notifications/{id}/read")
+    @PATCH("notifications/{id}")
     suspend fun markAsRead(@Path("id") notificationId: String): ApiResponse<Unit>
 
-    @POST("notifications/read-all")
+    @PATCH("notifications/read-all")
     suspend fun markAllAsRead(): ApiResponse<Unit>
 
     @GET(ApiEndpoints.Notifications.SETTINGS)

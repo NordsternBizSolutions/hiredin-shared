@@ -1,6 +1,6 @@
 package com.nordstern.hiredin.shared.sync.queue
 
-import com.nordstern.hiredin.shared.BuildConfig
+import com.nordstern.hiredin.shared.api.ApiConfig
 import com.nordstern.hiredin.shared.api.BaseApiClient
 import com.nordstern.hiredin.shared.database.entities.OfflineActionEntity
 import com.nordstern.hiredin.shared.sync.ActionStatus
@@ -28,7 +28,7 @@ class ActionProcessor @Inject constructor(
             } else null
 
             val requestBuilder = Request.Builder()
-                .url("${BuildConfig.API_BASE_URL}${action.endpoint}")
+                .url("${ApiConfig.getBaseUrl()}${action.endpoint}")
                 .method(action.method.uppercase(), body)
 
             action.headers?.let { headerJson ->

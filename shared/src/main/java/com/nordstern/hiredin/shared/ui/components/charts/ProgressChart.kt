@@ -1,25 +1,70 @@
 package com.nordstern.hiredin.shared.ui.components.charts
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
-import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
-import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
-import com.patrykandpatrick.vico.compose.chart.Chart
-import com.patrykandpatrick.vico.compose.chart.column.columnChart
-import com.patrykandpatrick.vico.compose.chart.line.lineChart
-import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
+import androidx.compose.ui.viewinterop.AndroidView
+import com.github.mikephil.charting.charts.HorizontalBarChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 
 @Composable
-fun ProgressChart(progress: Float, label: String, modifier: Modifier = Modifier) {
-    androidx.compose.foundation.layout.Column(modifier.fillMaxWidth()) {
-        Text("$label ${(progress * 100).toInt()}%", style = MaterialTheme.typography.labelMedium)
-        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(8.dp))
+fun ProgressChart(points: List<ChartPoint>, modifier: Modifier = Modifier, title: String? = null) {
+    val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
+    val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
+
+    Column(modifier) {
+        title?.let { Text(it, style = MaterialTheme.typography.titleSmall) }
+        AndroidView(
+            factory = { context ->
+                HorizontalBarChart(context).apply {
+                    description.isEnabled = false
+                    legend.isEnabled = false
+                    setDrawGridBackground(false)
+                    setTouchEnabled(false)
+
+                    xAxis.apply {
+                        position = XAxis.XAxisPosition.BOTTOM
+                        setDrawGridLines(false)
+                        this.textColor = textColor
+                        granularity = 1f
+                    }
+
+                    axisLeft.apply {
+                        setDrawGridLines(false)
+                        this.textColor = textColor
+                        axisMinimum = 0f
+                        axisMaximum = 100f // Assuming percentage
+                    }
+
+                    axisRight.isEnabled = false
+                }
+            },
+            update = { chart ->
+                val entries = points.mapIndexed { index, point ->
+                    BarEntry(index.toFloat(), point.value)
+                }
+
+                val dataSet = BarDataSet(entries, "").apply {
+                    color = primaryColor
+                    setDrawValues(true)
+                    valueTextColor = textColor
+                }
+
+                chart.xAxis.valueFormatter = IndexAxisValueFormatter(points.map { it.label })
+                chart.data = BarData(dataSet)
+                chart.invalidate()
+            },
+            modifier = Modifier.fillMaxWidth().height((points.size.coerceAtLeast(1) * 50).dp)
+        )
     }
 }

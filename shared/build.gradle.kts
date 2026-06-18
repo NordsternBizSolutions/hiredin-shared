@@ -1,9 +1,9 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlin.compose)
 }
 
 apply(from = rootProject.file("gradle/hiredin-env.gradle.kts"))
@@ -14,7 +14,7 @@ private val hiredinBuildConfigString =
 
 android {
     namespace = "com.nordstern.hiredin.shared"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
@@ -47,17 +47,9 @@ android {
         buildConfig = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
     }
 }
 
@@ -87,21 +79,22 @@ dependencies {
 
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    kapt(libs.room.compiler)
+    ksp(libs.room.compiler)
 
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
+    ksp(libs.kmetadata)
     implementation(libs.hilt.navigation.compose)
 
     implementation(libs.work.runtime)
     implementation(libs.hilt.work)
-    kapt(libs.hilt.work.compiler)
+    ksp(libs.hilt.work.compiler)
 
     implementation(libs.datastore)
     implementation(libs.security.crypto)
 
     implementation(libs.coil.compose)
-    implementation(libs.vico.compose)
+    implementation(libs.mpandroidchart)
     implementation(libs.accompanist.permissions)
     implementation(libs.biometric)
 

@@ -39,35 +39,74 @@ interface AuthApi {
 data class LoginRequest(
     val email: String,
     val password: String,
-    @SerializedName("device_id") val deviceId: String? = null
+    val deviceId: String? = null,
+    val appModule: String = "candidate",
+    val deviceType: String = "android"
 )
 data class ForgotPasswordRequest(val email: String)
 data class RegisterRequest(
     val email: String,
     val password: String,
-    @SerializedName("first_name") val firstName: String,
-    @SerializedName("last_name") val lastName: String,
-    @SerializedName("device_id") val deviceId: String? = null
+    val firstName: String,
+    val lastName: String,
+    val deviceId: String? = null
 )
 data class ResetPasswordRequest(
     val token: String,
-    @SerializedName("new_password") val newPassword: String
+    val newPassword: String
 )
 data class OAuthLoginRequest(
-    @SerializedName("id_token") val idToken: String? = null,
-    @SerializedName("access_token") val accessToken: String? = null,
-    @SerializedName("authorization_code") val authorizationCode: String? = null,
-    @SerializedName("device_id") val deviceId: String? = null
+    val idToken: String? = null,
+    val accessToken: String? = null,
+    val authorizationCode: String? = null,
+    val deviceId: String? = null
 )
 data class RefreshRequest(
-    @SerializedName("refresh_token") val refreshToken: String,
-    @SerializedName("device_id") val deviceId: String? = null
+    val refreshToken: String,
+    val deviceId: String? = null
 )
 data class LoginResponse(
-    @SerializedName("access_token") val accessToken: String,
-    @SerializedName("refresh_token") val refreshToken: String,
-    @SerializedName("expires_in") val expiresIn: Long,
-    @SerializedName("user_id") val userId: String? = null
+    @SerializedName(value = "accessToken", alternate = ["token", "access_token"])
+    val accessToken: String? = null,
+    @SerializedName(value = "refreshToken", alternate = ["refresh_token"])
+    val refreshToken: String,
+    @SerializedName(value = "expiresIn", alternate = ["expires_in"])
+    val expiresIn: Long? = null,
+    @SerializedName("expiresAt")
+    val expiresAt: String? = null,
+    @SerializedName(value = "userId", alternate = ["user_id"])
+    val userId: String? = null,
+    val user: MobileUserDto? = null
+) {
+    fun resolvedAccessToken(): String =
+        accessToken ?: throw IllegalStateException("Missing access token in login response")
+
+    fun resolvedUserId(): String? = userId ?: user?.id
+
+    fun resolvedExpiresInSeconds(): Long {
+        expiresIn?.let { return it }
+        if (!expiresAt.isNullOrBlank()) {
+            return try {
+                val expiryMs = java.time.Instant.parse(expiresAt).toEpochMilli()
+                ((expiryMs - System.currentTimeMillis()) / 1000).coerceAtLeast(60)
+            } catch (_: Exception) {
+                DEFAULT_EXPIRES_IN_SECONDS
+            }
+        }
+        return DEFAULT_EXPIRES_IN_SECONDS
+    }
+
+    private companion object {
+        const val DEFAULT_EXPIRES_IN_SECONDS = 604800L // 7 days
+    }
+}
+
+data class MobileUserDto(
+    val id: String,
+    val email: String? = null,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val role: String? = null
 )
 data class MeResponse(
     val userId: String,

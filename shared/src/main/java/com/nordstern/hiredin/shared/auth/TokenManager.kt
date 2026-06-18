@@ -116,10 +116,11 @@ class TokenManager @Inject constructor(
             )
         }
         if (response.success && response.data != null) {
+            val data = response.data
             return TokenResponse(
-                accessToken = response.data.accessToken,
-                refreshToken = response.data.refreshToken,
-                expiresIn = response.data.expiresIn
+                accessToken = data.resolvedAccessToken(),
+                refreshToken = data.refreshToken,
+                expiresIn = data.resolvedExpiresInSeconds()
             )
         }
         throw IllegalStateException(response.error ?: "Token refresh failed")

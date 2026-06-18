@@ -39,12 +39,38 @@ class BaseApiClient @Inject constructor(
 ) {
     private val logger = Logger.getLogger("BaseApiClient")
 
-    val retrofit: Retrofit by lazy { buildRetrofit(okHttpClient) }
-    val authenticatedRetrofit: Retrofit by lazy { buildRetrofit(authenticatedOkHttpClient) }
+    @Volatile private var configuredBaseUrl: String? = null
+    @Volatile private var unauthenticatedRetrofit: Retrofit? = null
+    @Volatile private var authenticatedRetrofitInstance: Retrofit? = null
 
-    private fun buildRetrofit(client: OkHttpClient): Retrofit =
+    val retrofit: Retrofit
+        get() = retrofitFor(unauthenticated = true)
+
+    val authenticatedRetrofit: Retrofit
+        get() = retrofitFor(unauthenticated = false)
+
+    @Synchronized
+    private fun retrofitFor(unauthenticated: Boolean): Retrofit {
+        val baseUrl = ApiConfig.getBaseUrl()
+        if (configuredBaseUrl != baseUrl) {
+            configuredBaseUrl = baseUrl
+            unauthenticatedRetrofit = null
+            authenticatedRetrofitInstance = null
+        }
+        return if (unauthenticated) {
+            unauthenticatedRetrofit ?: buildRetrofit(okHttpClient, baseUrl).also {
+                unauthenticatedRetrofit = it
+            }
+        } else {
+            authenticatedRetrofitInstance ?: buildRetrofit(authenticatedOkHttpClient, baseUrl).also {
+                authenticatedRetrofitInstance = it
+            }
+        }
+    }
+
+    private fun buildRetrofit(client: OkHttpClient, baseUrl: String): Retrofit =
         Retrofit.Builder()
-            .baseUrl(ApiConfig.getBaseUrl())
+            .baseUrl(baseUrl)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
@@ -104,9 +130,14 @@ class BaseApiClient @Inject constructor(
                     return@withContext ApiResponse.error(ErrorCodes.NETWORK_ERROR, "Network error. Please check your connection.")
                 }
             } catch (e: HttpException) {
-                logger.error("HTTP error: ${e.code()}", e)
+                val errorBody = e.response()?.errorBody()?.use { it.string() }
+                val serverMessage = ResponseParser.parseErrorMessage(errorBody)
+                logger.error("HTTP error: ${e.code()} body=$errorBody", e)
                 metricsCollector.recordFailure(e.code().toString(), System.currentTimeMillis() - startTime)
-                return@withContext ApiResponse.error(e.code().toString(), e.message() ?: "Server error occurred")
+                return@withContext ApiResponse.error(
+                    e.code().toString(),
+                    serverMessage ?: e.message() ?: "Server error occurred"
+                )
             } catch (e: Exception) {
                 logger.error("Unexpected error", e)
                 metricsCollector.recordFailure(ErrorCodes.UNKNOWN, System.currentTimeMillis() - startTime)

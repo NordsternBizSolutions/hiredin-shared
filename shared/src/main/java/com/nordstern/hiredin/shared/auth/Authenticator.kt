@@ -33,13 +33,14 @@ class Authenticator @Inject constructor(
         }
 
         return if (response.success && response.data != null) {
+            val data = response.data
             tokenManager.saveTokens(
-                response.data.accessToken,
-                response.data.refreshToken,
-                response.data.expiresIn
+                data.resolvedAccessToken(),
+                data.refreshToken,
+                data.resolvedExpiresInSeconds()
             )
-            response.data.userId?.let { tokenManager.saveUserId(it) }
-            sessionManager.onLogin(response.data.userId ?: email)
+            data.resolvedUserId()?.let { tokenManager.saveUserId(it) }
+            sessionManager.onLogin(data.resolvedUserId() ?: email)
             logger.info("Login successful")
             Result.success(Unit)
         } else {
@@ -89,13 +90,14 @@ class Authenticator @Inject constructor(
             )
         }
         return if (response.success && response.data != null) {
+            val data = response.data
             tokenManager.saveTokens(
-                response.data.accessToken,
-                response.data.refreshToken,
-                response.data.expiresIn
+                data.resolvedAccessToken(),
+                data.refreshToken,
+                data.resolvedExpiresInSeconds()
             )
-            response.data.userId?.let { tokenManager.saveUserId(it) }
-            sessionManager.onLogin(response.data.userId ?: email)
+            data.resolvedUserId()?.let { tokenManager.saveUserId(it) }
+            sessionManager.onLogin(data.resolvedUserId() ?: email)
             logger.info("Registration successful")
             Result.success(Unit)
         } else {
@@ -138,13 +140,14 @@ class Authenticator @Inject constructor(
             )
         }
         return if (response.success && response.data != null) {
+            val data = response.data
             tokenManager.saveTokens(
-                response.data.accessToken,
-                response.data.refreshToken,
-                response.data.expiresIn
+                data.resolvedAccessToken(),
+                data.refreshToken,
+                data.resolvedExpiresInSeconds()
             )
-            response.data.userId?.let { tokenManager.saveUserId(it) }
-            sessionManager.onLogin(response.data.userId ?: provider)
+            data.resolvedUserId()?.let { tokenManager.saveUserId(it) }
+            sessionManager.onLogin(data.resolvedUserId() ?: provider)
             logger.info("OAuth login successful for $provider")
             Result.success(Unit)
         } else {

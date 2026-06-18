@@ -25,8 +25,8 @@ class NotificationDataMapper @Inject constructor() {
             data = mapOf(
                 "id" to notification.id,
                 "title" to notification.title,
-                "body" to notification.body,
-                "type" to notification.type
+                "body" to notification.body.orEmpty(),
+                "type" to (notification.type ?: NotificationType.GENERAL.name.lowercase())
             )
         )
 }

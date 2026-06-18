@@ -7,7 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
-import android.os.Build
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import com.nordstern.hiredin.shared.R
 import com.nordstern.hiredin.shared.api.BaseApiClient
@@ -142,6 +142,8 @@ class PushNotificationHandler @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val soundUri = Settings.System.DEFAULT_NOTIFICATION_URI
+
         val notification = NotificationCompat.Builder(context, channelId)
             .setContentTitle(title)
             .setContentText(body)
@@ -150,7 +152,8 @@ class PushNotificationHandler @Inject constructor(
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(Notification.DEFAULT_ALL)
+            .setSound(soundUri)
+            .setDefaults(Notification.DEFAULT_VIBRATE or Notification.DEFAULT_LIGHTS)
             .build()
 
         notificationManager.notify(notificationId, notification)
