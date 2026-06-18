@@ -26,7 +26,7 @@ android {
             "API_BASE_URL",
             hiredinBuildConfigString("API_BASE_URL", "https://your-domain.com/api/mobile/v1/")
         )
-        buildConfigField("String", "LIBRARY_VERSION", "\"1.0.0\"")
+        buildConfigField("String", "LIBRARY_VERSION", "\"1.1.2\"")
     }
 
     buildTypes {
